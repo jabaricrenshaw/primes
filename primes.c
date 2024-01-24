@@ -14,7 +14,7 @@ int main(int argc, char *argv[]){
 
     sz = limit >> 1;
     b_mem_req = sizeof(unsigned long) * sz;
-    mb_mem_req = (float)b_mem_req/(1024*1024);
+    mb_mem_req = (float)b_mem_req/(1 << 20);
 
     if((e = (unsigned long *)malloc(sizeof(unsigned long)*sz)) == NULL){
         fprintf(stderr, "Attempted to allocate %lu members with %lu bytes (%.2f MB)", sz, b_mem_req, mb_mem_req);
