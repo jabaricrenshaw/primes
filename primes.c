@@ -1,8 +1,11 @@
 #include "util.h"
 #include <omp.h>
+#include <math.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[]){
-    unsigned long *e = 0, limit = 0, sz = 0, b_mem_req = 0;
+    char *e = 0;
+    unsigned long limit = 0, sz = 0, b_mem_req = 0;
     float mb_mem_req = 0;
 
     if(argc == 2){
@@ -11,12 +14,12 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Please provide integer limit as an argument.\nUSAGE: primes.c {LIMIT}\n");
         return EXIT_FAILURE;
     }
-
+    
     sz = limit >> 1;
-    b_mem_req = sizeof(unsigned long) * sz;
+    b_mem_req = sizeof(char) * sz;
     mb_mem_req = (float)b_mem_req/(1 << 20);
 
-    if((e = (unsigned long *)malloc(sizeof(unsigned long)*sz)) == NULL){
+    if((e = (char *)malloc(sizeof(char) * sz)) == NULL){
         fprintf(stderr, "Attempted to allocate %lu members with %lu bytes (%.2f MB)", sz, b_mem_req, mb_mem_req);
         return EXIT_FAILURE;
     }
@@ -32,13 +35,13 @@ int main(int argc, char *argv[]){
 #if defined OMP && OMP == 1
                 #pragma omp for 
 #endif
-                for(unsigned long j = e[i] + i; j < sz; j += e[i]){
-                    e[j] = 0;
+                for(unsigned long j = ((i << 1) + 1) + i; j < sz; j += ((i << 1) + 1)){
+                    e[j] ^= e[j];
                 }
             }
         }
     }
-
+    
     free(e);
     return EXIT_SUCCESS;
 }

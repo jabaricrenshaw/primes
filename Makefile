@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Wpedantic -O2
+CFLAGS=-Wall -Wextra -Wpedantic -O3
 LDFLAGS=-lm
 
 SRC=primes.c
