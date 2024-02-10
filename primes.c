@@ -8,7 +8,7 @@ int main(int argc, char *argv[]){
     if(argc == 2){
         limit = strtoul(argv[1], NULL, 0);
     }else{
-        fprintf(stderr, "Please provide integer limit as an argument.\nUSAGE: primes1.c {LIMIT}\n");
+        fprintf(stderr, "Please provide integer limit as an argument.\nUSAGE: primes.c {LIMIT}\n");
         return EXIT_FAILURE;
     }
 
