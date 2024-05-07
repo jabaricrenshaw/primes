@@ -1,100 +1,121 @@
-#include <math.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 #if defined THREADS
 #include <pthread.h>
 #endif
 
-typedef struct t_args{
-    unsigned long t_id;
-} t_args;
-
+unsigned long sz;
 char *e = 0;
-unsigned long sz = 0;
+
+struct thread_carrier {
+    pthread_t thread;
+    unsigned int id;  
+};
 
 #if defined THREADS
-void hello(t_args *t){
-    for(unsigned long i = t->t_id; i <= (unsigned long)sqrt(sz); i += THREADS){
-        if(e[i]){
+void* work(void *args){
+    struct thread_carrier *thc = args;
+    
+    for(unsigned long i = thc->id; i <= (unsigned long)sqrt(sz); i += THREADS){
+        if(e[i] == 0){
             for(unsigned long j = ((i << 1) + 1) + i; j < sz; j += ((i << 1) + 1)){
-                e[j] ^= e[j];
+                e[j] = 1;
             }
         }
     }
+    
+    return 0;
 }
 #endif
 
-void display_primes(char *e, unsigned long sz){
-    unsigned long cnt = 1;
-
-    printf("%d\n", 2);
+void display_primes(char *e, const unsigned long sz){
+    //printf("2: %d\n", e[0]);
+    unsigned long count = 1;
+    printf("2 ");
     for(unsigned long i = 1; i < sz; ++i){
-        if(e[i] != 0){
-        //    printf("%lu\n", (i << 1) + 1);
-            cnt++;
+        if(e[i] == 0){
+            printf("%ld ", (i << 1) + 1);
+            count++;
         }
+        //printf("%ld: %d\n", (i << 1) + 1, e[i]);
+        //count++;
     }
-
-    printf("TOTAL PRIMES: %lu\n", cnt);
+    printf("\nTotal primes: %lu\n", count);
 }
 
+char* init_entries(const unsigned long sz){
+    char *e = (char *)malloc(sz * sizeof(char));
+    
+    float bytes_req = (float)(sz * sizeof(char));
+    float mbytes_req = (float)bytes_req/(1 << 20);
+    char log_buf[256];
+    sprintf(log_buf, "%ld members with %.3fB (%.3fMB)", sz, bytes_req, mbytes_req);
 
-void init_entries(char *e, unsigned long sz){
-    e[0] = 1;
-    for(unsigned long i = 4; i <= (sz << 1); i += 2){
-        e[(i >> 1) - 1] = 1;
+    if(e == NULL){
+        fprintf(stderr, "Failed to allocate number space.\n");
+        fprintf(stderr, "Attempted to allocate %s\n", log_buf);
+        return NULL;
     }
+
+    printf("Allocated %s\n", log_buf);
+
+    return e;
 }
 
 int main(int argc, char *argv[]){
-    unsigned long b_mem_req = 0;
-    float mb_mem_req = 0;
-
     if(argc == 2){
-        /*
-         * Size of entries array -> (char *e) reduced by factor
-         * of 2 since only odd numbers are evaluated in this program.
-         */
         sz = strtoul(argv[1], NULL, 0) >> 1;
     }else{
         fprintf(stderr, "Please provide integer limit as an argument.\nUSAGE: primes.c {LIMIT}\n");
         return EXIT_FAILURE;
     }
-    
-    b_mem_req = sizeof(char) * sz;
-    mb_mem_req = (float)b_mem_req/(1 << 20);
+    e = init_entries(sz);
 
-    if((e = (char *)malloc(sizeof(char) * sz)) == NULL){
-        fprintf(stderr, "Attempted to allocate %lu members with %lu bytes (%.2f MB)", sz, b_mem_req, mb_mem_req);
-        return EXIT_FAILURE;
-    }
-    printf("Allocated %lu members with %lu bytes (%.2f MB)\n", sz, b_mem_req, mb_mem_req);
-    init_entries(e, sz);
-    
 #if defined THREADS && THREADS > 1
-    pthread_t thr[THREADS];
-    t_args ta[THREADS];
+    fprintf(stderr, "Starting with %d threads.\n", THREADS);
+    struct thread_carrier thc[THREADS];
     
+    int err = 0;
     for(size_t i = 0; i < THREADS; ++i){
-        ta[i].t_id = i + 1;
-        pthread_create(&thr[i], NULL, hello, &ta[i]);
+        thc[i].id = i + 1;
+        err = pthread_create(&thc[i].thread, NULL, &work, &thc[i]);
+        
+        if(err != 0){
+            fprintf(stderr, "Failed to create thread.\n");
+            return EXIT_FAILURE;
+        }
+    }
+    
+    err = 0;
+    for(size_t i = 0; i < THREADS; ++i){
+        err = pthread_join(thc[i].thread, NULL);
+        
+        if(err != 0){
+            fprintf(stderr, "Failed to join thread.\n");
+            return EXIT_FAILURE;
+        }
     }
 
-    for(size_t i = 0; i < THREADS; ++i){
-        pthread_join(thr[i], NULL);
-    }
 #else
+
     for(unsigned long i = 1; i <= (unsigned long)sqrt(sz); ++i){
-        if(e[i]){
+        if(e[i] == 0){
             for(unsigned long j = ((i << 1) + 1) + i; j < sz; j += ((i << 1) + 1)){
-                e[j] ^= e[j];
+                e[j] = 1;
             }
         }
     }
+
 #endif
     
-    display_primes(e, sz);
+    //display_primes(e, sz);
+    
     free(e);
-    return EXIT_SUCCESS;
+    return 0;
 }
+
+/* Saving ompiler flags here ...
+-O3 -Wunreachable-code -Wall -Wextra -Wpedantic -DTHREADS=4
+*/
